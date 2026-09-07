@@ -5,22 +5,32 @@
 LLM 에이전트에서 "다음 행동을 누가 정하는가"라는 설계 문제를 다룬다. 의미 이해가 필요한 판단은 LLM에 맡기고, 결정적이어야 하는 트리거는 코드로 처리하는 이중 라우팅 구조를 그래프로 표현했다.
 
 ## 구조
+
+```
 START → condition_agent → keyword_gate → [조건부 분기]
                                            ├→ analytics_agent → respond → END
                                            ├→ campaign_agent  → respond → END
                                            └→ respond → END
-노드별 역할
-condition_agent	: LLM structured output으로 다음 상태 판정 (핵심 축)
-keyword_gate : 키워드 매칭으로 분석 도구 개방 여부 결정 (보조 축)
-analytics_agent	: 점포 실적 조회
-campaign_agent : 캠페인 초안 생성
-respond	: 수집된 결과로 최종 응답 생성
+```
 
-파일별 역할
-state.py	: StateDecision(LLM 출력 스키마), GraphState(노드 공유 상태)
-nodes.py	: 노드 함수 5개
-graph.py	: StateGraph 조립, 분기 로직
-main.py	    : 터미널 실행 루프
+### 노드별 역할
+
+| 노드 | 역할 |
+| --- | --- |
+| condition_agent | LLM structured output으로 다음 상태 판정 (핵심 축) |
+| keyword_gate | 키워드 매칭으로 분석 도구 개방 여부 결정 (보조 축) |
+| analytics_agent | 점포 실적 조회 |
+| campaign_agent | 캠페인 초안 생성 |
+| respond | 수집된 결과로 최종 응답 생성 |
+
+### 파일별 역할
+
+| 파일 | 역할 |
+| --- | --- |
+| `state.py` | StateDecision(LLM 출력 스키마), GraphState(노드 공유 상태) |
+| `nodes.py` | 노드 함수 5개 |
+| `graph.py` | StateGraph 조립, 분기 로직 |
+| `main.py` | 터미널 실행 루프 |
 
 ## 설계 포인트
 - 이중 라우팅. LLM 판단과 키워드 게이트를 함께 돌린다. LLM이 분석 요청을 놓쳐도 발화에 "매출" 같은 키워드가 있으면 게이트가 분석 경로를 열어준다. 반대로 "매출 UP 캠페인 만들어줘"처럼 키워드가 캠페인명에 포함된 경우는 프롬프트의 예외 규칙으로 LLM이 잡아내고, 분기 함수가 LLM 판단을 우선하도록 순서를 잡았다.
